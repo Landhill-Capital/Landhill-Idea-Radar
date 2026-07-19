@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Dict
 
-from .sources import reddit, producthunt, ycombinator, google_trends
+from .sources import reddit, producthunt, ycombinator, google_trends, statsnz, companies_office, trademe
 from .config import DIGEST_TOP_PAIN
 
 
@@ -48,8 +48,40 @@ def build(week_label: str | None = None) -> str:
         traffic = f" ({t['approx_traffic']})" if t.get("approx_traffic") else ""
         out.append(f"- **{t['query']}**{traffic}")
 
+    releases = statsnz.scan(limit=8)
+    out += ["", "## 5. StatsNZ — latest information releases", ""]
+    if not releases:
+        out.append("_no releases returned_")
+    for rel in releases:
+        out.append(f"- [{rel['title']}]({rel['url']})")
+        if rel.get("summary"):
+            out.append(f"  {rel['summary']}")
+
+    regs = companies_office.scan(days=7, limit=10)
+    out += ["", "## 6. Companies Office / NZBN — recent registrations", ""]
+    for reg in regs:
+        if reg.get("stub"):
+            out.append(f"- _{reg['title']}_ — [enable]({reg['url']})")
+            if reg.get("summary"):
+                out.append(f"  {reg['summary']}")
+        else:
+            when = f" · registered {reg.get('registered')}" if reg.get("registered") else ""
+            out.append(f"- [{reg['title']}]({reg['url']}) — {reg.get('type','')}{when}")
+
+    tm = trademe.scan(limit=10)
+    out += ["", "## 7. Trade Me — service/business categories", ""]
+    for l in tm:
+        if l.get("stub"):
+            out.append(f"- _{l['title']}_ — [enable]({l['url']})")
+            if l.get("summary"):
+                out.append(f"  {l['summary']}")
+        else:
+            price = f" · {l['price']}" if l.get("price") else ""
+            region = f" · {l['region']}" if l.get("region") else ""
+            out.append(f"- [{l['title']}]({l['url']}) · {l.get('category','')}{region}{price}")
+
     out += ["",
-            "## 5. Rubric reminder",
+            "## 8. Rubric reminder",
             "Score each candidate on: pain intensity, willingness to pay,",
             "founder-market fit, unfair local advantage, distribution path,",
             "24-month defensibility. Ship at 14/18.",
