@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Dict
 
-from .sources import reddit, producthunt
+from .sources import reddit, producthunt, ycombinator, google_trends
 from .config import DIGEST_TOP_PAIN
 
 
@@ -21,9 +21,8 @@ def build(week_label: str | None = None) -> str:
     if not pain:
         out.append("_no matches this week_")
     for h in pain:
-        out.append(f"- **r/{h['sub']}** — [{h['title']}]({h['url']})  ")
-        out.append(f"  score {h['score']} • {h['num_comments']} comments")
-        if h["excerpt"]:
+        out.append(f"- **r/{h['sub']}** — [{h['title']}]({h['url']})")
+        if h.get("excerpt"):
             out.append(f"  > {h['excerpt']}")
         out.append("")
 
@@ -33,8 +32,24 @@ def build(week_label: str | None = None) -> str:
         if l["summary"]:
             out.append(f"  {l['summary']}")
 
+    yc = ycombinator.scan(limit=10)
+    out += ["", "## 3. Show HN launches (YC-adjacent)", ""]
+    if not yc:
+        out.append("_no launches returned_")
+    for l in yc:
+        pts = f" · {l['points']}pts · {l['comments']} comments" if l.get("points") is not None else ""
+        out.append(f"- [{l['title']}]({l['url']}){pts} · [HN]({l['hn_url']})")
+
+    trends = google_trends.scan(limit=10)
+    out += ["", "## 4. Google Trends NZ — rising queries", ""]
+    if not trends:
+        out.append("_no rising queries returned_")
+    for t in trends:
+        traffic = f" ({t['approx_traffic']})" if t.get("approx_traffic") else ""
+        out.append(f"- **{t['query']}**{traffic}")
+
     out += ["",
-            "## 3. Rubric reminder",
+            "## 5. Rubric reminder",
             "Score each candidate on: pain intensity, willingness to pay,",
             "founder-market fit, unfair local advantage, distribution path,",
             "24-month defensibility. Ship at 14/18.",
